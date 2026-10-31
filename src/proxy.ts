@@ -51,8 +51,11 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
 
 function withCsp(request: NextRequest): NextResponse {
   if (request.nextUrl.pathname.startsWith("/api/")) return NextResponse.next();
+  // Caddy terminates TLS and strips X-Forwarded-Proto so Next's proxy layer
+  // does not TLS-handshake its own HTTP port. Treat production public URL as HTTPS.
   const protocol =
     request.headers.get("x-forwarded-proto")?.split(",")[0].trim() ??
+    (process.env.DOSSIER_PUBLIC_URL?.startsWith("https") ? "https" : null) ??
     request.nextUrl.protocol.replace(/:$/, "");
   const policy = contentSecurityPolicy(createNonce(), {
     dev: process.env.NODE_ENV === "development",
