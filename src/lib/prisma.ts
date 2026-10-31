@@ -3,6 +3,8 @@ import "server-only";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "@/generated/prisma/client";
+
+type AppPrisma = PrismaClient;
 import { env } from "@/lib/env";
 import { tenantExtension } from "@/lib/tenant-prisma";
 
@@ -23,10 +25,12 @@ function client() {
 /**
  * Shared DB client. Tenant scoping applies when `runWithTenant` is active.
  */
-export const prisma = new Proxy({} as ReturnType<typeof makeClient>, {
+// Cast through unknown: the tenant extension's runtime shape is compatible for
+// queries/actions; call sites typed against PrismaClient keep compiling.
+export const prisma = new Proxy({} as AppPrisma, {
   get(_, key) {
-    const target = client();
+    const target = client() as unknown as AppPrisma;
     const value = Reflect.get(target, key, target);
-    return typeof value === "function" ? value.bind(target) : value;
+    return typeof value === "function" ? (value as Function).bind(target) : value;
   },
 });

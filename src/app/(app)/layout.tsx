@@ -24,11 +24,10 @@ import { UsagePingDialog } from "./usage-ping-dialog";
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   // Proxy already redirects signed-out visitors; this is the check next to the data.
   const session = await verifySession();
-  return runWithTenant(session.userId, () => AppLayoutBody({ children }));
+  return runWithTenant(session.userId, () => AppLayoutBody(children));
 }
 
-
-async function AppLayoutBody({ children }: LayoutProps<"/">) {
+async function AppLayoutBody(children: React.ReactNode) {
   // The day's usage ping and update check, if they haven't run yet: after the page, so they never slow one down.
   after(notePageLoad);
   after(checkForUpdatesDaily);
