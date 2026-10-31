@@ -4,6 +4,7 @@ import { unstable_rethrow } from "next/navigation";
 import { z } from "zod";
 
 import { getSession, type Session } from "@/lib/auth/session";
+import { runWithTenant } from "@/lib/tenant";
 import { logServerError } from "@/lib/log";
 import { messages } from "@/lib/messages";
 
@@ -52,7 +53,9 @@ export function action<S extends z.ZodType, T>(
   return async (input) => {
     const session = await getSession();
     if (!session) return { ok: false, error: messages.signedOut };
-    return run(schema, input, (data, toast) => handler(data, { session, toast }));
+    return runWithTenant(session.userId, () =>
+      run(schema, input, (data, toast) => handler(data, { session, toast })),
+    );
   };
 }
 

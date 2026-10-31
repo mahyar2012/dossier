@@ -4,11 +4,8 @@ import path from "node:path";
 
 import { z } from "zod";
 
-import { isPasswordHash } from "@/lib/auth/password-hash";
-
 const SECRET_MIN_LENGTH = 32;
 const GENERATE_SECRET = "for example the output of `openssl rand -base64 32`";
-const HASH_PASSWORD = "Make one with `docker run --rm -it ghcr.io/aientech/dossier hash-password`";
 
 export const AI_PROVIDERS = ["local", "openai", "anthropic", "mistral", "lmstudio"] as const;
 export const JOB_SOURCE_NAMES = ["jsearch", "adzuna", "arbeitsagentur", "freehire", "off"] as const;
@@ -27,15 +24,16 @@ const optional = <T extends z.ZodType>(schema: T) =>
   z.preprocess(unsetIfEmpty, schema.optional());
 
 const schema = z.object({
-  // Never echo the value: it may be the password itself, set by mistake.
-  DOSSIER_PASSWORD: required(
-    "DOSSIER_PASSWORD",
-    `Set it to a hash of the password you want to sign in with. ${HASH_PASSWORD}.`,
-  ).pipe(
-    z.string().trim().refine(isPasswordHash, {
-      error: `DOSSIER_PASSWORD must be a hash of your password, not the password itself. ${HASH_PASSWORD} and set DOSSIER_PASSWORD to what it prints.`,
-    }),
-  ),
+  // Nahal fork: Clerk replaces DOSSIER_PASSWORD. Keys are also read by
+  // @clerk/nextjs from the process env; we validate them here so boot fails loudly.
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: required(
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+    "Set it to the Nahal Clerk publishable key (same app as Cashly).",
+  ).pipe(z.string().trim().min(1)),
+  CLERK_SECRET_KEY: required(
+    "CLERK_SECRET_KEY",
+    "Set it to the Nahal Clerk secret key (same app as Cashly).",
+  ).pipe(z.string().trim().min(1)),
   DOSSIER_SECRET: required(
     "DOSSIER_SECRET",
     `Set it to a random string of at least ${SECRET_MIN_LENGTH} characters, ${GENERATE_SECRET}.`,

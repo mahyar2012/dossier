@@ -3,6 +3,7 @@ import { after } from "next/server";
 
 import { countAgentQueue } from "@/lib/agent/view";
 import { verifySession } from "@/lib/auth/session";
+import { runWithTenant } from "@/lib/tenant";
 import { inboxCount } from "@/lib/google/inbox-data";
 import { loadProfileName } from "@/lib/profile-data";
 import { loadSettings } from "@/lib/settings-data";
@@ -22,7 +23,12 @@ import { UsagePingDialog } from "./usage-ping-dialog";
  */
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   // Proxy already redirects signed-out visitors; this is the check next to the data.
-  await verifySession();
+  const session = await verifySession();
+  return runWithTenant(session.userId, () => AppLayoutBody({ children }));
+}
+
+
+async function AppLayoutBody({ children }: LayoutProps<"/">) {
   // The day's usage ping and update check, if they haven't run yet: after the page, so they never slow one down.
   after(notePageLoad);
   after(checkForUpdatesDaily);

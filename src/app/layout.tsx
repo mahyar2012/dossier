@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ClerkProvider } from "@clerk/nextjs";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
 
@@ -21,8 +22,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" data-theme={scheme} className={`${fontVariables} h-full antialiased`}>
       <body className="min-h-full">
-        {children}
-        <Toaster />
+        <ClerkProvider dynamic>
+          {children}
+          <Toaster />
+        </ClerkProvider>
       </body>
     </html>
   );

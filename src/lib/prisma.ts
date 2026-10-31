@@ -4,24 +4,26 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "@/generated/prisma/client";
 import { env } from "@/lib/env";
+import { tenantExtension } from "@/lib/tenant-prisma";
 
-// Reuse one client across hot reloads in development instead of opening a new
-// connection pool on every change.
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+const globalForPrisma = globalThis as unknown as { prisma?: ReturnType<typeof makeClient> };
 
-function client(): PrismaClient {
-  globalForPrisma.prisma ??= new PrismaClient({
+function makeClient() {
+  const base = new PrismaClient({
     adapter: new PrismaPg({ connectionString: env.DATABASE_URL }),
   });
+  return base.$extends(tenantExtension());
+}
+
+function client() {
+  globalForPrisma.prisma ??= makeClient();
   return globalForPrisma.prisma;
 }
 
 /**
- * The shared database client. It's created on first use rather than on
- * import, so `next build`, which imports every page, works without the
- * secrets that reading `env` requires.
+ * Shared DB client. Tenant scoping applies when `runWithTenant` is active.
  */
-export const prisma: PrismaClient = new Proxy({} as PrismaClient, {
+export const prisma = new Proxy({} as ReturnType<typeof makeClient>, {
   get(_, key) {
     const target = client();
     const value = Reflect.get(target, key, target);

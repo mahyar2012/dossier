@@ -25,19 +25,27 @@ datasource db {
 /// per filled-in field. The keys and how each value is written are in
 /// src/lib/profile.ts (PROFILE_KEYS); a missing key means empty.
 model ProfileField {
-  key       String   @id
-  value     String
-  updatedAt DateTime @updatedAt
+  clerkUserId String
+  key         String
+  value       String
+  updatedAt   DateTime @updatedAt
+
+  @@id([clerkUserId, key])
+  @@index([clerkUserId])
 }
 
 model Skill {
   id          String            @id @default(cuid())
+  clerkUserId String
   /// Unique ignoring case ("Figma" and "figma" are the same skill).
-  name        String            @unique @db.Citext
+  name        String            @db.Citext
   sort        Int               @default(0)
   experiences ExperienceSkill[]
   projects    ProjectSkill[]
   createdAt   DateTime          @default(now())
+
+  @@unique([clerkUserId, name])
+  @@index([clerkUserId])
 }
 
 enum LanguageLevel {
@@ -51,17 +59,22 @@ enum LanguageLevel {
 }
 
 model Language {
-  id        String        @id @default(cuid())
+  id          String        @id @default(cuid())
+  clerkUserId String
   /// Unique ignoring case; adding an existing language updates its level (PRO-4).
-  name      String        @unique @db.Citext
-  level     LanguageLevel
-  sort      Int           @default(0)
-  createdAt DateTime      @default(now())
+  name        String        @db.Citext
+  level       LanguageLevel
+  sort        Int           @default(0)
+  createdAt   DateTime      @default(now())
+
+  @@unique([clerkUserId, name])
+  @@index([clerkUserId])
 }
 
 /// A role. Dates are month and year; `current` means "Present" (no end date).
 model Experience {
   id         String            @id @default(cuid())
+  clerkUserId String
   role       String            @default("")
   company    String            @default("")
   location   String            @default("")
@@ -79,6 +92,8 @@ model Experience {
   skills     ExperienceSkill[]
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
+
+  @@index([clerkUserId])
 }
 
 /// A skill used in a role (PRO-6). Deleting either side removes the link (PRO-3).
@@ -95,6 +110,7 @@ model ExperienceSkill {
 /// A side, open-source, course or thesis project (PRO-13). Dates work as in Experience.
 model Project {
   id         String         @id @default(cuid())
+  clerkUserId String
   name       String         @default("")
   /// Where it can be seen, e.g. its repository or site.
   link       String         @default("")
@@ -109,6 +125,8 @@ model Project {
   skills     ProjectSkill[]
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
+
+  @@index([clerkUserId])
 }
 
 /// A skill used in a project, as ExperienceSkill is for a role.
@@ -125,6 +143,7 @@ model ProjectSkill {
 /// A degree, course or certificate. Dates work as in Experience.
 model Education {
   id         String   @id @default(cuid())
+  clerkUserId String
   degree     String   @default("")
   school     String   @default("")
   startYear  Int?
@@ -136,12 +155,15 @@ model Education {
   sort       Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@index([clerkUserId])
 }
 
 /// Private unless included in a document (PRO-8).
 /// A publication (#218), cited the way its author wants: no citation style is enforced.
 model Publication {
   id        String   @id @default(cuid())
+  clerkUserId String
   /// The citation as written, with **bold** and *italic* marked like that.
   citation  String   @default("")
   /// Where to read it, e.g. its DOI link.
@@ -151,10 +173,13 @@ model Publication {
   sort      Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([clerkUserId])
 }
 
 model Reference {
   id        String   @id @default(cuid())
+  clerkUserId String
   name      String   @default("")
   relation  String   @default("")
   company   String   @default("")
@@ -163,6 +188,8 @@ model Reference {
   sort      Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([clerkUserId])
 }
 
 /// Something the user tells the AI about themselves: one of the profile's
@@ -170,6 +197,7 @@ model Reference {
 /// document; given to the AI with the profile when it writes.
 model Fact {
   id            String       @id @default(cuid())
+  clerkUserId String
   /// The application it's for; null for the profile's own.
   applicationId String?
   application   Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
@@ -179,6 +207,8 @@ model Fact {
   updatedAt     DateTime     @updatedAt
 
   @@index([applicationId, sort])
+
+  @@index([clerkUserId])
 }
 
 // ─── Themes and settings (E2-2) ──────────────────────────────────────────────
@@ -278,6 +308,8 @@ enum Density {
 /// them in sync, and a trigger stops them from being deleted.
 model Theme {
   id            String        @id @default(cuid())
+  /// Null for built-in shared themes; set for per-user custom themes.
+  clerkUserId   String?
   builtIn       Boolean       @default(false)
   name          String
   headFont      ThemeFont
@@ -296,6 +328,8 @@ model Theme {
   documents     Document[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+
+  @@index([clerkUserId])
 }
 
 enum AiProvider {
@@ -340,9 +374,13 @@ enum Tone {
 /// The keys, their types and defaults are in src/lib/settings.ts
 /// (settingsSchema); the enums above type its values.
 model Setting {
-  key       String   @id
-  value     String
-  updatedAt DateTime @updatedAt
+  clerkUserId String
+  key         String
+  value       String
+  updatedAt   DateTime @updatedAt
+
+  @@id([clerkUserId, key])
+  @@index([clerkUserId])
 }
 
 // ─── Applications (E2-3) ─────────────────────────────────────────────────────
@@ -391,6 +429,7 @@ enum FunnelStage {
 
 model Application {
   id                  String            @id @default(cuid())
+  clerkUserId String
   /// Whether the user made it, or the job agent prepared it (E16).
   origin              ApplicationOrigin @default(MANUAL)
   /// The agent's score for the posting, when the agent prepared it.
@@ -454,17 +493,21 @@ model Application {
   facts               Fact[]
   /// Its background jobs, deleted with it (their inputs and results hold the posting and the documents).
   jobs                Job[]
+  startupUserStates StartupUserState[]
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
   @@index([status])
   @@index([updatedAt])
+
+  @@index([clerkUserId])
 }
 
 /// One status change. Keeps the application's furthestStage and sentAt from
 /// before the change, so the change can be undone (decision in #26).
 model StatusEvent {
   id                    String            @id @default(cuid())
+  clerkUserId String
   applicationId         String
   application           Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   from                  ApplicationStatus
@@ -474,6 +517,8 @@ model StatusEvent {
   previousSentAt        DateTime?
 
   @@index([applicationId, at])
+
+  @@index([clerkUserId])
 }
 
 enum DocumentKind {
@@ -486,6 +531,7 @@ enum DocumentKind {
 /// A tailored resume, cover letter or application email, split into editable units (unitsSchema).
 model Document {
   id            String            @id @default(cuid())
+  clerkUserId String
   applicationId String
   application   Application       @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   kind          DocumentKind
@@ -502,6 +548,8 @@ model Document {
   updatedAt     DateTime          @updatedAt
 
   @@unique([applicationId, kind])
+
+  @@index([clerkUserId])
 }
 
 /// Why a tailored document has a version (E8-10, APP-13).
@@ -525,6 +573,7 @@ enum VersionCause {
 /// A tailored document's units as they were at one point (E8-10).
 model DocumentVersion {
   id         String       @id @default(cuid())
+  clerkUserId String
   documentId String
   document   Document     @relation(fields: [documentId], references: [id], onDelete: Cascade)
   units      Json
@@ -534,6 +583,8 @@ model DocumentVersion {
   createdAt  DateTime     @default(now())
 
   @@index([documentId, createdAt])
+
+  @@index([clerkUserId])
 }
 
 enum ChatRole {
@@ -544,6 +595,7 @@ enum ChatRole {
 /// A message in an application's "Refine with AI" panel (APP-7).
 model ChatMessage {
   id            String      @id @default(cuid())
+  clerkUserId String
   applicationId String
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   role          ChatRole
@@ -560,11 +612,14 @@ model ChatMessage {
   createdAt     DateTime    @default(now())
 
   @@index([applicationId, createdAt])
+
+  @@index([clerkUserId])
 }
 
 /// A private note or activity entry on an application (APP-14, E8-9).
 model Note {
   id            String      @id @default(cuid())
+  clerkUserId String
   applicationId String
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   body          String
@@ -573,6 +628,8 @@ model Note {
   updatedAt     DateTime    @default(now()) @updatedAt
 
   @@index([applicationId, createdAt])
+
+  @@index([clerkUserId])
 }
 
 // ─── Job search (E14) ────────────────────────────────────────────────────────
@@ -590,6 +647,7 @@ enum PostingSource {
 /// fields follow the posting shape in src/lib/job-search/search.ts.
 model Posting {
   id            String        @id @default(cuid())
+  clerkUserId String
   source        PostingSource
   /// The source's own id for it.
   externalId    String
@@ -620,6 +678,8 @@ model Posting {
   @@unique([source, externalId])
   @@index([savedAt])
   @@index([dismissedAt])
+
+  @@index([clerkUserId])
 }
 
 /// A posting pasted into New application and handed to Claude chat (#221):
@@ -627,6 +687,7 @@ model Posting {
 /// task-data sweep deletes it.
 model ClaudePaste {
   id        String   @id @default(uuid())
+  clerkUserId String
   text      String
   /// The posting's link, when one was given; always http(s), or empty.
   url       String   @default("")
@@ -634,6 +695,8 @@ model ClaudePaste {
   createdAt DateTime @default(now())
 
   @@index([expiresAt])
+
+  @@index([clerkUserId])
 }
 
 // ─── Job agent (E16) ─────────────────────────────────────────────────────────
@@ -643,6 +706,7 @@ model ClaudePaste {
 /// posting never comes back.
 model AgentCandidate {
   id            String               @id @default(cuid())
+  clerkUserId String
   source        PostingSource
   /// The source's own id for it.
   externalId    String
@@ -679,31 +743,36 @@ model AgentCandidate {
   @@unique([source, externalId])
   @@index([status, score])
   @@index([createdAt])
+
+  @@index([clerkUserId])
 }
 
 /// How well a posting fits the profile (#208): from Score in Find jobs, or
 /// the job agent. Kept by the source's id, for search results that aren't
 /// stored as postings, so the score shows again in later searches.
 model PostingScore {
-  source     PostingSource
-  externalId String
+  clerkUserId String
+  source      PostingSource
+  externalId  String
   /// 0–100 (score-posting).
-  score      Int
+  score       Int
   /// JSON lists of strings.
-  reasons    Json
-  redFlags   Json
+  reasons     Json
+  redFlags    Json
   /// The prompt version that scored it, e.g. "score-posting@1".
-  scoredWith String
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  scoredWith  String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
-  @@id([source, externalId])
+  @@id([clerkUserId, source, externalId])
+  @@index([clerkUserId])
 }
 
 /// A search on Find jobs, kept with what it found until the user removes it
 /// (E14-10), so going back to it costs no searches from the source's plan.
 model PostingSearch {
   id        String        @id @default(cuid())
+  clerkUserId String
   source    PostingSource
   /// The search as asked (searchQuerySchema in src/lib/job-search/search.ts).
   query     Json
@@ -717,6 +786,8 @@ model PostingSearch {
   updatedAt DateTime      @updatedAt
 
   @@index([createdAt])
+
+  @@index([clerkUserId])
 }
 
 // ─── Startups (#222) ─────────────────────────────────────────────────────────
@@ -778,6 +849,7 @@ model Startup {
   /// The application started from it ("Write to them"); deleting the application keeps the startup.
   applicationId      String?       @unique
   application        Application?  @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  userStates         StartupUserState[]
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -788,9 +860,34 @@ model Startup {
 /// A startup removed with "Remove and don't bring back" (#222): only a
 /// SHA-256 hash of its post, its site's domain or its name, so a refresh
 /// leaves it out without keeping anything about it.
+
+/// Per-user view of a shared Startup catalog row (Nahal multi-tenant fork).
+model StartupUserState {
+  id              String        @id @default(cuid())
+  clerkUserId     String
+  startupId       String
+  startup         Startup       @relation(fields: [startupId], references: [id], onDelete: Cascade)
+  status          StartupStatus @default(NEW)
+  score           Int           @default(0)
+  reasons         Json
+  scoredWith      String        @default("")
+  notes           String        @default("")
+  applicationId   String?       @unique
+  application     Application?  @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([clerkUserId, startupId])
+  @@index([clerkUserId, status, score])
+}
+
 model StartupBlock {
-  hash      String   @id
-  createdAt DateTime @default(now())
+  clerkUserId String
+  hash        String
+  createdAt   DateTime @default(now())
+
+  @@id([clerkUserId, hash])
+  @@index([clerkUserId])
 }
 
 // ─── Google: Gmail and Calendar (E15) ────────────────────────────────────────
@@ -798,7 +895,8 @@ model StartupBlock {
 /// The connected Google account; at most one row, with id "google". It
 /// belongs to this install, not its data: exports leave it out.
 model GoogleAccount {
-  id              String    @id @default("google")
+  id              String    @id @default(cuid())
+  clerkUserId    String    @unique
   /// The Gmail address it's connected as.
   email           String
   /// The OAuth refresh token, encrypted like the API keys (GOOGLE_TOKEN).
@@ -835,6 +933,7 @@ enum ReplyKind {
 /// the text is kept, not attachments.
 model EmailMessage {
   id              String             @id @default(cuid())
+  clerkUserId String
   gmailId         String             @unique
   threadId        String
   /// Null while it isn't linked to an application ("Needs a look").
@@ -877,6 +976,8 @@ model EmailMessage {
   @@index([threadId])
   @@index([applicationId, sentAt])
   @@index([sentAt])
+
+  @@index([clerkUserId])
 }
 
 // ─── Sign-in (E3-4) ──────────────────────────────────────────────────────────
@@ -910,6 +1011,7 @@ enum JobStatus {
 /// documents. Each job type validates its own input and result (src/lib/jobs).
 model Job {
   id            String       @id @default(cuid())
+  clerkUserId String
   /// Which handler runs it, e.g. "extract-posting".
   type          String
   /// Finds the job again for something on screen, e.g. "application:<id>".
@@ -932,4 +1034,6 @@ model Job {
   @@index([key, createdAt])
   @@index([status])
   @@index([applicationId])
+
+  @@index([clerkUserId])
 }

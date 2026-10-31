@@ -4,6 +4,7 @@ import { unstable_rethrow } from "next/navigation";
 import { type NextRequest, NextResponse } from "next/server";
 
 import { getSession, type Session } from "@/lib/auth/session";
+import { runWithTenant } from "@/lib/tenant";
 import { logServerError } from "@/lib/log";
 import { messages } from "@/lib/messages";
 
@@ -64,7 +65,7 @@ export function route<Context = unknown>(
 
     let response: Response;
     try {
-      response = await handler(request, context, session);
+      response = await runWithTenant(session.userId, () => handler(request, context, session));
     } catch (error) {
       unstable_rethrow(error);
       logServerError(`${request.method} ${request.nextUrl.pathname}`, error);
