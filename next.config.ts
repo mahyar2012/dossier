@@ -6,13 +6,6 @@ const nextConfig: NextConfig = {
     // Seed/tests and many create call sites are not yet updated for the required field.
     ignoreBuildErrors: true,
   },
-  // Behind Caddy: X-Forwarded-Proto=https + listen on 127.0.0.1 makes Next build
-  // initURL as https://localhost:PORT. NextResponse.next({ request }) then
-  // absolute-rewrites there and proxyRequest TLS-handshakes an HTTP port (EPROTO).
-  // Trust the public Host header instead.
-  experimental: {
-    trustHostHeader: true,
-  },
   // The production image runs .next/standalone: the server and only the files
   // it needs (E12-1).
   output: "standalone",
